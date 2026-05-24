@@ -86,3 +86,6 @@ This project simulates a production-level mobility system with real-world archit
 ## 👨‍💻Author
 - 👨‍💻Developed by: Biswajit Pattanaik  
 - 💼Focus: Full Stack Development | System Design | AI Integration | Backend Engineering
+
+## SYSTEM DESGINING ARCHITECTURE
+<img width="1536" height="1024" alt="RYDEX_SYSTEM DESGINING " src="https://github.com/user-attachments/assets/2dea51fc-5522-4e76-a0d3-277ebd2cbaa3" />
