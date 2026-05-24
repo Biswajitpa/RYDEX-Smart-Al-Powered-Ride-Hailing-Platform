@@ -54,28 +54,25 @@ This project simulates a production-level mobility system with real-world archit
 - 📊 Scalable logic for future ML-based demand prediction
 ## ⚙️Tech Stack
 <img width="656" height="435" alt="Screenshot 2026-05-24 092714" src="https://github.com/user-attachments/assets/5e7b3aec-fd62-4284-b4ac-d92fb306119f" />
+
 ## 🏗️System Architecture
-User / Driver / Admin
-        ↓
-   Next.js Frontend
-        ↓
- API Gateway (Node.js + Express)
-        ↓
- ┌─────────────────────────────┐
- | Rate Limiter + Auth Layer   |
- └─────────────────────────────┘
-        ↓
- ┌─────────────────────────────┐
- | Core Services               |
- | - User Service              |
- | - Ride Service              |
- | - Driver Service            |
- | - Payment Service           |
- └─────────────────────────────┘
-        ↓
-MongoDB Database Cluster
-        ↓
-External APIs:
-Google Maps | Zego Cloud | Payment Gateway | OTP Service
-        ↓
-Load Balancer → Multiple Server Instances
+<img width="393" height="492" alt="image" src="https://github.com/user-attachments/assets/9135d824-3133-45fc-a288-a1d2ee1f79d3" />
+
+##🔄 Ride Flow (Simplified)
+- User signs up / logs in (OTP + OAuth)
+- User books ride using GPS location
+- System assigns nearest driver
+- Pickup OTP verification
+- Ride tracking via live map
+- Drop OTP verification
+- Payment completion
+- Ride history + analytics 
+
+## 💡Why RYDEX?
+- RYDEX is not just a project — it is a real-world system design implementation, focusing on:
+- Scalable architecture
+- Secure authentication system
+- Real-time mobility solution
+- AI + DSA integration
+- Production-level backend thinking
+  
