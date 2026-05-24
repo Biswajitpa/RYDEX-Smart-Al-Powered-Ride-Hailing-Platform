@@ -47,3 +47,8 @@ This project simulates a production-level mobility system with real-world archit
 - 🔐 Google OAuth 2.0 login
 - 📲 OTP-based pickup & drop verification system
 - 🧠 Secure role-based access control (User / Driver / Admin)
+## 🧠 AI & DSA Integration
+- 📍 Shortest path optimization (graph-based routing logic)
+- 🚖 Smart ride allocation algorithm
+- 💰 Dynamic fare estimation system
+- 📊 Scalable logic for future ML-based demand prediction
