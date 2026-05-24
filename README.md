@@ -75,4 +75,14 @@ This project simulates a production-level mobility system with real-world archit
 - Real-time mobility solution
 - AI + DSA integration
 - Production-level backend thinking
-  
+- 
+## 🚀Future Improvements
+- AI-based demand prediction
+- Surge pricing system
+- Microservices architecture migration
+- Kubernetes deployment
+- Advanced fraud detection system
+
+## 👨‍💻Author
+- 👨‍💻Developed by: Biswajit Pattanaik  
+- 💼Focus: Full Stack Development | System Design | AI Integration | Backend Engineering
