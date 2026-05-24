@@ -64,6 +64,7 @@ This project simulates a production-level mobility system with real-world archit
 5.🧑‍💼 Unified Dashboard Update
 - Available for both Admin and Vendor panels
 - Consistent UI/UX across roles
+<img width="1902" height="1002" alt="Screenshot 2026-05-23 141332" src="https://github.com/user-attachments/assets/4863b6d4-c018-41b0-b5e8-74d9e691a088" />
 
 ## ⚙️Tech Stack
 <img width="656" height="435" alt="Screenshot 2026-05-24 092714" src="https://github.com/user-attachments/assets/5e7b3aec-fd62-4284-b4ac-d92fb306119f" />
