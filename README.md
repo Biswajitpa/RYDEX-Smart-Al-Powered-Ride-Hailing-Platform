@@ -1,4 +1,4 @@
-🚗 RYDEX – Smart AI-Powered Ride-Hailing & Mobility Platform
+## 🚗RYDEX – Smart AI-Powered Ride-Hailing & Mobility Platform
 <p align="center"> <img src="https://capsule-render.vercel.app/api?type=waving&color=0:00F7FF,100:0055FF&height=200&section=header&text=RYDEX%20Mobility%20Platform&fontSize=40&fontColor=ffffff&animation=fadeIn&fontAlignY=35"/> </p>
 
 ## 🚀Overview
@@ -52,3 +52,30 @@ This project simulates a production-level mobility system with real-world archit
 - 🚖 Smart ride allocation algorithm
 - 💰 Dynamic fare estimation system
 - 📊 Scalable logic for future ML-based demand prediction
+## ⚙️Tech Stack
+<img width="656" height="435" alt="Screenshot 2026-05-24 092714" src="https://github.com/user-attachments/assets/5e7b3aec-fd62-4284-b4ac-d92fb306119f" />
+## 🏗️System Architecture
+User / Driver / Admin
+        ↓
+   Next.js Frontend
+        ↓
+ API Gateway (Node.js + Express)
+        ↓
+ ┌─────────────────────────────┐
+ | Rate Limiter + Auth Layer   |
+ └─────────────────────────────┘
+        ↓
+ ┌─────────────────────────────┐
+ | Core Services               |
+ | - User Service              |
+ | - Ride Service              |
+ | - Driver Service            |
+ | - Payment Service           |
+ └─────────────────────────────┘
+        ↓
+MongoDB Database Cluster
+        ↓
+External APIs:
+Google Maps | Zego Cloud | Payment Gateway | OTP Service
+        ↓
+Load Balancer → Multiple Server Instances
