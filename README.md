@@ -58,7 +58,7 @@ This project simulates a production-level mobility system with real-world archit
 ## 🏗️System Architecture
 <img width="393" height="492" alt="image" src="https://github.com/user-attachments/assets/9135d824-3133-45fc-a288-a1d2ee1f79d3" />
 
-##🔄 Ride Flow (Simplified)
+## 🔄Ride Flow 
 - User signs up / logs in (OTP + OAuth)
 - User books ride using GPS location
 - System assigns nearest driver
