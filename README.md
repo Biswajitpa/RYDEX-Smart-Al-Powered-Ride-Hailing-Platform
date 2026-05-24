@@ -33,3 +33,17 @@ This project simulates a production-level mobility system with real-world archit
 - Video KYC verification using Zego Cloud
 - Earnings dashboard with analytics & charts
 - Vehicle pricing setup after approval
+3. 🛡️Admin Panel
+- Multi-stage approval workflow:
+  - Document Verification → Video Verification → Vehicle Approval → Activation
+- Monitor users, drivers, and rides
+- Fraud prevention system
+- Earnings & revenue tracking
+- Modern dashboard UI with animations & charts
+## 🔐Security & System Design
+- 🔒 Rate Limiting for API protection (OTP, login, booking)
+- ⚖️ Load Balancing for scalable traffic handling
+- 🔑 JWT Authentication system
+- 🔐 Google OAuth 2.0 login
+- 📲 OTP-based pickup & drop verification system
+- 🧠 Secure role-based access control (User / Driver / Admin)
