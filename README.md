@@ -52,6 +52,19 @@ This project simulates a production-level mobility system with real-world archit
 - 🚖 Smart ride allocation algorithm
 - 💰 Dynamic fare estimation system
 - 📊 Scalable logic for future ML-based demand prediction
+
+## 📊 Earnings Analytics Dashboard (Admin & Vendor)
+- A powerful analytics module has been added to both Admin and Vendor dashboards to improve financial tracking and transparency.
+1. 📈 Daily Earnings Graph
+- Interactive bar chart showing earnings on a daily basis
+2. 💰 Today vs Yesterday Comparison
+- Real-time comparison between today’s and yesterday’s earnings
+3. 📅 Daily Revenue Tracking
+4. Complete breakdown of earnings per day for better insights
+5.🧑‍💼 Unified Dashboard Update
+- Available for both Admin and Vendor panels
+- Consistent UI/UX across roles
+
 ## ⚙️Tech Stack
 <img width="656" height="435" alt="Screenshot 2026-05-24 092714" src="https://github.com/user-attachments/assets/5e7b3aec-fd62-4284-b4ac-d92fb306119f" />
 
