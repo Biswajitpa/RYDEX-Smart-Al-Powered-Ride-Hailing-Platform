@@ -60,7 +60,8 @@ This project simulates a production-level mobility system with real-world archit
 2. 💰 Today vs Yesterday Comparison
 - Real-time comparison between today’s and yesterday’s earnings
 3. 📅 Daily Revenue Tracking
-4. Complete breakdown of earnings per day for better insights
+- Complete breakdown of earnings per day for better insights
+  
 5.🧑‍💼 Unified Dashboard Update
 - Available for both Admin and Vendor panels
 - Consistent UI/UX across roles
