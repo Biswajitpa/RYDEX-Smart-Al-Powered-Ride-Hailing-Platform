@@ -104,3 +104,7 @@ This project simulates a production-level mobility system with real-world archit
 
 ## SYSTEM DESING  ARCHITECTURE
 <img width="1536" height="1024" alt="RYDEX_SYSTEM DESGINING " src="https://github.com/user-attachments/assets/2dea51fc-5522-4e76-a0d3-277ebd2cbaa3" />
+
+## DEMO VIDEO 
+https://drive.google.com/file/d/1M6gp-WgwNSNYZbsABlcvqf2kXTqDKwCO/view?usp=sharing
+
