@@ -6,13 +6,17 @@ import axios from "axios";
 
 export async function POST(
   req: NextRequest,
- context : { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> } // Properly destructured for Next.js strict typing
 ) {
   await connectDb();
-const id=(await context.params).id
+  
+  // Destructure id safely after awaiting params
+  const { id } = await params;
+  
   const session = await auth();
-  if (!session?.user?.id)
+  if (!session?.user?.id) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
 
   const driverId = session.user.id;
 
@@ -27,23 +31,31 @@ const id=(await context.params).id
     },
     { new: true }
   );
-  await axios.post(
-  `${process.env.NEXT_PUBLIC_SOCKET_SERVER}/emit`,
-  {
-    userId: booking.user,
-    event: "booking-updated",
-    data: {
-      bookingId: booking._id,
-      status: "rejected",
-    },
-  }
-);
 
+  // Check if booking exists BEFORE using booking.user or emitting sockets
   if (!booking) {
     return NextResponse.json(
       { message: "Ride already processed or invalid" },
       { status: 400 }
     );
+  }
+
+  // Safe to emit now that we know booking is valid
+  try {
+    await axios.post(
+      `${process.env.NEXT_PUBLIC_SOCKET_SERVER}/emit`,
+      {
+        userId: booking.user,
+        event: "booking-updated",
+        data: {
+          bookingId: booking._id,
+          status: "rejected",
+        },
+      }
+    );
+  } catch (socketError) {
+    console.error("Socket emission failed:", socketError);
+    // Left inside a try/catch so a downtime on the socket server doesn't break the endpoint
   }
 
   return NextResponse.json({ success: true });
