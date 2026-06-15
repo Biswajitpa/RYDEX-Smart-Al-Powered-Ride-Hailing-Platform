@@ -7,7 +7,7 @@ import VendorDashboard from "@/components/VendorDashboard";
 import User from "@/models/user.model";
 import connectDb from "@/lib/db";
 import PublicHome from "@/components/PublicHome";
-import AdminDashboard from "./admin/dashboard/page";
+
 import { redirect, RedirectType } from "next/navigation"
 import GeoUpdater from "@/components/GeoUpdater";
 
