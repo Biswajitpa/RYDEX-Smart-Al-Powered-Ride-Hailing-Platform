@@ -8,8 +8,8 @@ import {
   CheckCircle2
 } from "lucide-react";
 import { getSocket } from "@/lib/socket";
-import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import RideChat from "@/components/RideChat";
 
@@ -64,9 +64,10 @@ const PAYMENT_LABEL: Record<PaymentStatus, { label: string; cls: string }> = {
 const PEEK_H = 140;
 
 /* ══════════════════════════════════════════════════════════════════════ */
-export default function RidePage() {
-  const { id }  = useParams();
-  const router  = useRouter();
+export default function RideTrackingPage({ params }: { params: Promise<{ id: string }> }) {
+  // ── Unwrap async params (Next.js 15+) ──
+  const { id } = use(params);
+  const router = useRouter();
 
   const [booking,          setBooking]          = useState<BookingDetails | null>(null);
   const [driverPos,        setDriverPos]        = useState<[number, number] | null>(null);
@@ -76,7 +77,6 @@ export default function RidePage() {
   const [etaToPickup,      setEtaToPickup]      = useState(0);
   const [distanceToDrop,   setDistanceToDrop]   = useState(0);
   const [etaToDrop,        setEtaToDrop]        = useState(0);
-  /* chat only for confirmed status */
   const [chatOpen,         setChatOpen]         = useState(false);
   const [expanded,         setExpanded]         = useState(false);
   const [loading,          setLoading]          = useState(true);
@@ -86,12 +86,14 @@ export default function RidePage() {
   const fetchBooking = async () => {
     try {
       setLoading(true);
-      const res  = await fetch(`/api/booking/${id}`);
+      const res = await fetch(`/api/booking/${id}`);
       if (!res.ok) throw new Error("Failed to fetch booking");
       const data = await res.json();
-      setBooking(data);
-      setPickupPos([data.pickupLocation.coordinates[1], data.pickupLocation.coordinates[0]]);
-      setDropPos  ([data.dropLocation.coordinates[1],   data.dropLocation.coordinates[0]]);
+      // Support both { booking: {...} } and direct object responses
+      const bookingData: BookingDetails = data.booking ?? data;
+      setBooking(bookingData);
+      setPickupPos([bookingData.pickupLocation.coordinates[1], bookingData.pickupLocation.coordinates[0]]);
+      setDropPos  ([bookingData.dropLocation.coordinates[1],   bookingData.dropLocation.coordinates[0]]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
@@ -99,7 +101,7 @@ export default function RidePage() {
     }
   };
 
-  useEffect(() => { fetchBooking(); }, [id]);
+  useEffect(() => { if (id) fetchBooking(); }, [id]);
 
   /* ── SOCKET ── */
   useEffect(() => {
@@ -109,7 +111,6 @@ export default function RidePage() {
     socket.on("driver-location", (data: any) => setDriverPos([data.latitude, data.longitude]));
     socket.on("booking-updated", (data: any) => {
       setBooking(prev => prev ? { ...prev, ...data } : null);
-      /* close chat if ride moves past confirmed */
       if (data.status && data.status !== "confirmed") setChatOpen(false);
     });
     socket.on("driver-assigned", (data: any) => {
@@ -158,25 +159,16 @@ export default function RidePage() {
   const isActive    = ["requested", "awaiting_payment", "confirmed", "started"].includes(status);
   const isFailed    = ["cancelled", "rejected", "expired"].includes(status);
   const isCompleted = status === "completed";
-  /* chat only when driver heading to pickup, not yet started */
   const canChat     = status === "confirmed";
   const showDriver  = ["confirmed", "started", "completed"].includes(status) && !!booking.driver;
   const displayEta      = mapStatus === "arriving" ? etaToPickup : etaToDrop;
   const displayDistance = mapStatus === "arriving" ? distanceToPickup : distanceToDrop;
 
-  /* ══ COMPLETED — FULL SCREEN ══ */
-  if (isCompleted) {
-    return (
-      <CompletedScreen booking={booking} router={router} />
-    );
-  }
+  /* ══ COMPLETED ══ */
+  if (isCompleted) return <CompletedScreen booking={booking} router={router} />;
 
-  /* ══ FAILED — FULL SCREEN ══ */
-  if (isFailed) {
-    return (
-      <FailedScreen booking={booking} status={status} cfg={cfg} router={router} />
-    );
-  }
+  /* ══ FAILED ══ */
+  if (isFailed) return <FailedScreen booking={booking} status={status} cfg={cfg} router={router} />;
 
   const panelProps = {
     booking, status, cfg, isActive, canChat, showDriver,
@@ -299,17 +291,12 @@ function CompletedScreen({ booking, router }: { booking: BookingDetails; router:
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}
       className="h-screen w-full bg-zinc-950 flex flex-col overflow-y-auto"
     >
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
-
-        {/* Icon */}
         <motion.div
-          initial={{ scale: 0.5, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
+          initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
           className="mb-8"
         >
@@ -321,8 +308,7 @@ function CompletedScreen({ booking, router }: { booking: BookingDetails; router:
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.5 }}
           className="w-full max-w-sm"
         >
@@ -443,14 +429,11 @@ function FailedScreen({ booking, status, cfg, router }: { booking: BookingDetail
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}
       className="h-screen w-full bg-zinc-950 flex flex-col items-center justify-center px-6"
     >
       <motion.div
-        initial={{ scale: 0.5, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
+        initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
         className="mb-8"
       >
@@ -465,15 +448,13 @@ function FailedScreen({ booking, status, cfg, router }: { booking: BookingDetail
       </motion.div>
 
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2, duration: 0.5 }}
         className="w-full max-w-sm text-center"
       >
         <h1 className="text-white text-2xl font-black mb-2">{cfg.label}</h1>
         <p className="text-zinc-500 text-sm mb-8">{cfg.sublabel}</p>
 
-        {/* Route recap */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden mb-6 text-left">
           <div className="flex gap-3 p-4 border-b border-zinc-800">
             <div className="flex flex-col items-center flex-shrink-0 pt-1">
@@ -524,7 +505,7 @@ function PanelContent({
   return (
     <div className="flex flex-col pt-5 pb-6 gap-3">
 
-      {/* SEARCHING (requested) */}
+      {/* SEARCHING */}
       {status === "requested" && (
         <div className="mx-5 lg:mx-6">
           <div className="bg-zinc-50 border border-zinc-100 rounded-2xl p-5 flex items-center gap-4">
@@ -537,7 +518,7 @@ function PanelContent({
         </div>
       )}
 
-      {/* PAYMENT (awaiting_payment) */}
+      {/* PAYMENT */}
       {status === "awaiting_payment" && (
         <div className="mx-5 lg:mx-6">
           <div className="bg-purple-950 rounded-2xl p-5">
@@ -553,7 +534,7 @@ function PanelContent({
         </div>
       )}
 
-      {/* ETA + FARE (active, not requested/payment) */}
+      {/* ETA + FARE */}
       {isActive && !["requested", "awaiting_payment"].includes(status) && (
         <div className="mx-5 lg:mx-6 grid grid-cols-2 gap-2">
           <div className="bg-zinc-50 border border-zinc-100 rounded-2xl p-4 flex items-center gap-3">
@@ -612,7 +593,6 @@ function PanelContent({
             </div>
           </div>
 
-          {/* Call always when active; Message only when canChat */}
           {isActive && (
             <div className="flex gap-2 mt-2">
               {booking.driverMobileNumber && (
@@ -698,9 +678,6 @@ function PanelContent({
           </div>
         </div>
       )}
-
-      {/* CANCEL BUTTON */}
-     
 
     </div>
   );
