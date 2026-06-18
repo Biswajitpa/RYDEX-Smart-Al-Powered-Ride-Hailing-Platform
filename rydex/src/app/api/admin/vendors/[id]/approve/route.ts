@@ -6,9 +6,10 @@ import User from "@/models/user.model";
 import VehicleDocument from "@/models/vehicleDocument.model";
 import PartnerBank from "@/models/partnerBank.model";
 
-export async function POST(
+// Changed from POST to PATCH to align with frontend update actions
+export async function PATCH(
   req: NextRequest,
-  context:{params: Promise<{ id: string; }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDb();
@@ -54,7 +55,7 @@ export async function POST(
     /* ---------- APPROVE ---------- */
     user.vendorStatus = "approved";
     user.isVendorBlocked = false;
-    user.vendorOnboardingStep=4
+    user.vendorOnboardingStep = 4;
     user.videoKycStatus = "pending";
     user.vendorApprovedAt = new Date(); // optional field
     await user.save();
