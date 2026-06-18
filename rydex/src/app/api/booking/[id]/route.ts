@@ -1,24 +1,32 @@
-import { NextRequest, NextResponse } from "next/server";
 import connectDb from "@/lib/db";
-// ... keep your other model imports at the top exactly as they are
+import Booking from "@/models/booking.model";
+import { NextResponse } from "next/server";
+import User from "@/models/user.model"; 
 
-export async function POST(
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> } // 1. Treat params as a Promise
+export async function GET(
+  req: Request,
+  context: { params: Promise<{ id: string }> }
 ) {
-  await connectDb();
-
-  // 2. Await the params promise to extract the id safely
-  const { id } = await context.params; 
-
   try {
-    // ... 
-    // REST OF YOUR CODE STAYS EXACTLY THE SAME
-    // Just make sure it uses the 'id' variable we extracted above
-    // ...
+    await connectDb();
+    const { id } = await context.params;
+
+    if (!id) {
+      return NextResponse.json({ error: "Missing booking ID" }, { status: 400 });
+    }
+
+    // This fetches the booking and attaches driver details
+    const booking = await Booking.findById(id).populate("driver");
+
+    if (!booking) {
+      return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+    }
+
+    // Sends the object directly to match the frontend
+    return NextResponse.json(booking);
     
-    return NextResponse.json({ success: true });
   } catch (error: any) {
+    console.error("BACKEND FETCH ERROR:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
