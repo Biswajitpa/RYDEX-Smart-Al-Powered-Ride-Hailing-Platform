@@ -61,6 +61,16 @@ const PAYMENT_LABEL: Record<PaymentStatus, { label: string; cls: string }> = {
   failed:  { label: "Payment Failed",  cls: "bg-red-100 text-red-700"         },
 };
 
+/* ─── FARE HELPER ────────────────────────────────────────────────────── */
+// Safely format fare: if value looks like it's in paise (> 10000 for a typical ride),
+// divide by 100. Adjust the threshold to match your backend's actual unit.
+function formatFare(fare: number): string {
+  if (!fare || isNaN(fare)) return "0";
+  // If fare is suspiciously large (likely stored in paise), convert to rupees
+  const rupees = fare > 10000 ? Math.round(fare / 100) : fare;
+  return rupees.toLocaleString("en-IN");
+}
+
 const PEEK_H = 140;
 
 /* ══════════════════════════════════════════════════════════════════════ */
@@ -76,7 +86,6 @@ export default function RidePage() {
   const [etaToPickup,      setEtaToPickup]      = useState(0);
   const [distanceToDrop,   setDistanceToDrop]   = useState(0);
   const [etaToDrop,        setEtaToDrop]        = useState(0);
-  /* chat only for confirmed status */
   const [chatOpen,         setChatOpen]         = useState(false);
   const [expanded,         setExpanded]         = useState(false);
   const [loading,          setLoading]          = useState(true);
@@ -106,15 +115,25 @@ export default function RidePage() {
     if (!id || !booking) return;
     const socket = getSocket();
     socket.emit("join-booking", id);
-    socket.on("driver-location", (data: any) => setDriverPos([data.latitude, data.longitude]));
+
+    socket.on("driver-location", (data: any) => {
+      setDriverPos([data.latitude, data.longitude]);
+    });
+
     socket.on("booking-updated", (data: any) => {
       setBooking(prev => prev ? { ...prev, ...data } : null);
-      /* close chat if ride moves past confirmed */
       if (data.status && data.status !== "confirmed") setChatOpen(false);
     });
+
     socket.on("driver-assigned", (data: any) => {
-      setBooking(prev => prev ? { ...prev, driver: data.driver, driverMobileNumber: data.driverMobileNumber } : null);
+      setBooking(prev => prev ? {
+        ...prev,
+        driver: data.driver,
+        vehicle: data.vehicle ?? prev.vehicle,
+        driverMobileNumber: data.driverMobileNumber,
+      } : null);
     });
+
     return () => {
       socket.off("driver-location");
       socket.off("booking-updated");
@@ -158,24 +177,21 @@ export default function RidePage() {
   const isActive    = ["requested", "awaiting_payment", "confirmed", "started"].includes(status);
   const isFailed    = ["cancelled", "rejected", "expired"].includes(status);
   const isCompleted = status === "completed";
-  /* chat only when driver heading to pickup, not yet started */
   const canChat     = status === "confirmed";
   const showDriver  = ["confirmed", "started", "completed"].includes(status) && !!booking.driver;
-  const displayEta      = mapStatus === "arriving" ? etaToPickup : etaToDrop;
+
+  // FIX: When "arriving" show eta/distance to pickup; when "ongoing" show eta/distance to drop
+  const displayEta      = mapStatus === "arriving" ? etaToPickup  : etaToDrop;
   const displayDistance = mapStatus === "arriving" ? distanceToPickup : distanceToDrop;
 
   /* ══ COMPLETED — FULL SCREEN ══ */
   if (isCompleted) {
-    return (
-      <CompletedScreen booking={booking} router={router} />
-    );
+    return <CompletedScreen booking={booking} router={router} />;
   }
 
   /* ══ FAILED — FULL SCREEN ══ */
   if (isFailed) {
-    return (
-      <FailedScreen booking={booking} status={status} cfg={cfg} router={router} />
-    );
+    return <FailedScreen booking={booking} status={status} cfg={cfg} router={router} />;
   }
 
   const panelProps = {
@@ -196,10 +212,14 @@ export default function RidePage() {
           dropLocation={dropPos!}
           status={mapStatus}
           onStats={({ distanceToPickup, durationToPickup, distanceToDrop, durationToDrop }) => {
-            setDistanceToPickup(distanceToPickup); setEtaToPickup(durationToPickup);
-            setDistanceToDrop(distanceToDrop);     setEtaToDrop(durationToDrop);
+            setDistanceToPickup(distanceToPickup);
+            setEtaToPickup(durationToPickup);
+            setDistanceToDrop(distanceToDrop);
+            setEtaToDrop(durationToDrop);
           }}
         />
+
+        {/* Status pill floating on map */}
         <motion.div
           initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, duration: 0.5 }}
@@ -225,7 +245,10 @@ export default function RidePage() {
             {isActive && (
               <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full">
                 <Zap size={12} className="text-amber-400" />
-                <span className="text-white text-xs font-semibold">{Math.round(displayEta)} min</span>
+                {/* FIX: show "--" instead of "0" when ETA hasn't loaded yet */}
+                <span className="text-white text-xs font-semibold">
+                  {displayEta > 0 ? `${Math.round(displayEta)} min` : "—"}
+                </span>
               </div>
             )}
           </div>
@@ -267,8 +290,15 @@ export default function RidePage() {
               <div className="flex items-center gap-3">
                 {isActive && (
                   <div className="text-right">
-                    <p className="text-2xl font-black text-zinc-900 leading-none">{Math.round(displayEta)}</p>
-                    <p className="text-[10px] text-zinc-400 uppercase tracking-wider">min</p>
+                    {/* FIX: show "--" when ETA is 0/unloaded */}
+                    {displayEta > 0 ? (
+                      <>
+                        <p className="text-2xl font-black text-zinc-900 leading-none">{Math.round(displayEta)}</p>
+                        <p className="text-[10px] text-zinc-400 uppercase tracking-wider">min</p>
+                      </>
+                    ) : (
+                      <p className="text-lg font-black text-zinc-400 leading-none">—</p>
+                    )}
                   </div>
                 )}
                 <motion.div
@@ -334,7 +364,8 @@ function CompletedScreen({ booking, router }: { booking: BookingDetails; router:
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 mb-3">
             <p className="text-zinc-500 text-[10px] uppercase tracking-widest font-semibold mb-1 text-center">Total Fare</p>
             <p className="text-white text-5xl font-black flex items-center justify-center gap-1 mb-4">
-              <IndianRupee size={30} strokeWidth={2.5} /> {booking.fare}
+              {/* FIX: use formatFare to handle paise vs rupees */}
+              <IndianRupee size={30} strokeWidth={2.5} /> {formatFare(booking.fare)}
             </p>
             <div className="flex items-center justify-between text-xs border-t border-zinc-800 pt-3">
               <span className="text-zinc-500">Payment</span>
@@ -543,7 +574,8 @@ function PanelContent({
           <div className="bg-purple-950 rounded-2xl p-5">
             <p className="text-purple-200 text-[10px] uppercase tracking-widest font-semibold mb-1">Action Required</p>
             <p className="text-white font-bold text-lg mb-1 flex items-center gap-1">
-              <IndianRupee size={18} /> {booking.fare}
+              {/* FIX: use formatFare here too */}
+              <IndianRupee size={18} /> {formatFare(booking.fare)}
             </p>
             <p className="text-purple-300 text-xs mb-4">Complete payment to confirm your ride</p>
             <button onClick={onRetryPayment} className="w-full bg-white text-purple-900 py-3 rounded-xl text-sm font-bold hover:bg-purple-50 transition-colors">
@@ -562,9 +594,14 @@ function PanelContent({
             </div>
             <div>
               <p className="text-[10px] text-zinc-400 uppercase tracking-wider font-semibold">ETA</p>
-              <p className="text-lg font-black text-zinc-900 leading-none mt-0.5">
-                {Math.round(displayEta)}<span className="text-xs font-normal text-zinc-400 ml-0.5">min</span>
-              </p>
+              {/* FIX: show "--" when ETA hasn't loaded yet instead of "0 min" */}
+              {displayEta > 0 ? (
+                <p className="text-lg font-black text-zinc-900 leading-none mt-0.5">
+                  {Math.round(displayEta)}<span className="text-xs font-normal text-zinc-400 ml-0.5">min</span>
+                </p>
+              ) : (
+                <p className="text-lg font-black text-zinc-400 leading-none mt-0.5">—</p>
+              )}
             </div>
           </div>
           <div className="bg-zinc-950 rounded-2xl p-4 flex items-center gap-3">
@@ -573,7 +610,8 @@ function PanelContent({
             </div>
             <div>
               <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Fare</p>
-              <p className="text-lg font-black text-white leading-none mt-0.5">₹{booking.fare}</p>
+              {/* FIX: use formatFare */}
+              <p className="text-lg font-black text-white leading-none mt-0.5">₹{formatFare(booking.fare)}</p>
             </div>
           </div>
         </div>
@@ -599,7 +637,8 @@ function PanelContent({
               </div>
               {booking.vehicle && (
                 <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                  <span className="text-zinc-400 text-xs">{booking.vehicle.vehicleModel}</span>
+                  {/* FIX: show fallback text if vehicleModel is missing */}
+                  <span className="text-zinc-400 text-xs">{booking.vehicle.vehicleModel || "Vehicle"}</span>
                   <span className="text-zinc-700 text-xs">•</span>
                   <span className="text-zinc-300 text-xs bg-white/10 px-2 py-0.5 rounded-full font-mono">{booking.vehicle.number}</span>
                 </div>
@@ -616,14 +655,16 @@ function PanelContent({
           {isActive && (
             <div className="flex gap-2 mt-2">
               {booking.driverMobileNumber && (
-                <a href={`tel:${booking.driverMobileNumber}`}
+                <a
+                  href={`tel:${booking.driverMobileNumber}`}
                   className={`flex items-center justify-center gap-2 bg-zinc-100 hover:bg-zinc-200 active:scale-[0.97] transition-all text-zinc-900 py-3 rounded-xl text-sm font-semibold ${canChat ? "flex-1" : "w-full"}`}
                 >
                   <Phone size={15} /> Call
                 </a>
               )}
               {canChat && (
-                <button onClick={onChatToggle}
+                <button
+                  onClick={onChatToggle}
                   className={`flex-1 flex items-center justify-center gap-2 active:scale-[0.97] transition-all py-3 rounded-xl text-sm font-semibold ${chatOpen ? "bg-zinc-200 text-zinc-900" : "bg-zinc-900 hover:bg-zinc-800 text-white"}`}
                 >
                   <MessageCircle size={15} />
@@ -638,7 +679,8 @@ function PanelContent({
       {/* CHAT — confirmed only */}
       <AnimatePresence>
         {chatOpen && canChat && (
-          <motion.div key="chat"
+          <motion.div
+            key="chat"
             initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
             className="mx-5 lg:mx-6 overflow-hidden"
@@ -690,7 +732,8 @@ function PanelContent({
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[10px] text-zinc-400 uppercase tracking-wider font-semibold mb-0.5">Vehicle</p>
-              <p className="text-sm font-bold text-zinc-900 truncate">{booking.vehicle.vehicleModel}</p>
+              {/* FIX: fallback text if vehicleModel is empty */}
+              <p className="text-sm font-bold text-zinc-900 truncate">{booking.vehicle.vehicleModel || "—"}</p>
             </div>
             <div className="flex-shrink-0 bg-zinc-900 px-3 py-1.5 rounded-lg">
               <p className="text-white text-xs font-black tracking-widest font-mono">{booking.vehicle.number}</p>
@@ -699,8 +742,17 @@ function PanelContent({
         </div>
       )}
 
-      {/* CANCEL BUTTON */}
-     
+      {/* CANCEL BUTTON — only show when ride is cancellable */}
+      {["requested", "confirmed"].includes(status) && (
+        <div className="mx-5 lg:mx-6 mt-1">
+          <button
+            onClick={onCancel}
+            className="w-full border border-red-200 text-red-500 bg-red-50 hover:bg-red-100 active:scale-[0.98] transition-all py-3.5 rounded-2xl text-sm font-semibold"
+          >
+            Cancel Ride
+          </button>
+        </div>
+      )}
 
     </div>
   );
