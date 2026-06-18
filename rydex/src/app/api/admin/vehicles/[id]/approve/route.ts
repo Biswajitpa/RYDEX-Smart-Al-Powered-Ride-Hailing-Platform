@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import connectDb from "@/lib/db";
 import { auth } from "@/auth";
+import connectDb from "@/lib/db";
+import Vehicle from "@/models/vehicle.model";
 import User from "@/models/user.model";
 
 export async function POST(
@@ -8,50 +9,48 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    await connectDb();
-
     /* ---------- AUTH CHECK ---------- */
     const session = await auth();
-    if (!session?.user || session.user.role !== "admin") {
-      return NextResponse.json(
-        { message: "Unauthorized" },
-        { status: 401 }
-      );
+    if (!session?.user?.id || session.user.role !== "admin") {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const { id: vendorId } = await context.params;
+    await connectDb();
 
-    /* ---------- DIRECT MONGO DATABASE UPDATE ---------- */
-    // Using findByIdAndUpdate with $set forces the changes into MongoDB without validation errors
-    const updatedUser = await User.findByIdAndUpdate(
-      vendorId,
+    // Safely unpack dynamic route parameters for Next.js App Router
+    const { id: vehicleId } = await context.params;
+
+    /* ---------- ATOMIC VEHICLE UPDATE ---------- */
+    // Using findByIdAndUpdate bypasses strict validation hooks for mock/test data fields
+    const vehicle = await Vehicle.findByIdAndUpdate(
+      vehicleId,
       {
         $set: {
-          vendorStatus: "approved",
-          isVendorBlocked: false,
-          vendorOnboardingStep: 4,
-          videoKycStatus: "pending",
-          vendorApprovedAt: new Date(),
+          status: "approved",
+          rejectionReason: null, // Clear out any previous rejection reason strings cleanly
         }
       },
-      { new: true } // Returns the modified document
+      { new: true } // Returns the updated vehicle record document
     );
 
-    if (!updatedUser) {
-      return NextResponse.json(
-        { message: "Vendor not found in database" },
-        { status: 404 }
-      );
+    if (!vehicle) {
+      return NextResponse.json({ message: "Vehicle not found" }, { status: 404 });
     }
+
+    /* ---------- UPDATE VENDOR STEP ---------- */
+    // Move vendor to LIVE step (7)
+    await User.findByIdAndUpdate(vehicle.owner, {
+      $set: { vendorOnboardingStep: 7 }
+    });
 
     return NextResponse.json({
       success: true,
-      message: "Vendor approved successfully",
+      message: "Vehicle pricing approved successfully",
     });
   } catch (error: any) {
-    console.error("APPROVE VENDOR ERROR:", error);
+    console.error("VEHICLE APPROVE ERROR:", error);
     return NextResponse.json(
-      { message: error.message || "Internal server error" },
+      { message: error.message || "Server error occurred during validation" }, 
       { status: 500 }
     );
   }
