@@ -46,6 +46,7 @@ export default function AdminVendorReviewPage() {
   const approveVendor = async () => {
     try {
       setActionLoading(true);
+      // Calls your precise backend folder structure layout via POST
       const res = await axios.post(`/api/admin/vendors/${id}/approve`);
       
       if (res.data.success) {
@@ -55,11 +56,8 @@ export default function AdminVendorReviewPage() {
       }
     } catch (err: any) {
       console.error("Approval error details:", err);
-      
-      // Extracts the precise technical error response message sent by your backend route
       const status = err.response?.status || "Unknown Status";
-      const errorMsg = err.response?.data?.message || err.message || "No specific error message returned";
-      
+      const errorMsg = err.response?.data?.message || err.message || "No error message context available";
       alert(`Error (${status}): ${errorMsg}`);
     } finally {
       setActionLoading(false);
@@ -81,10 +79,8 @@ export default function AdminVendorReviewPage() {
       }
     } catch (err: any) {
       console.error("Rejection error details:", err);
-      
       const status = err.response?.status || "Unknown Status";
-      const errorMsg = err.response?.data?.message || err.message || "No specific error message returned";
-      
+      const errorMsg = err.response?.data?.message || err.message || "No error message context available";
       alert(`Error (${status}): ${errorMsg}`);
     } finally {
       setActionLoading(false);
