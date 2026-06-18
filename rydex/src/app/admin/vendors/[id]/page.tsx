@@ -31,26 +31,53 @@ export default function AdminVendorReviewPage() {
 
   useEffect(() => {
     async function load() {
-      const res = await axios.get(`/api/admin/vendors/${id}`);
-      setData(res.data.vendor);
-      setLoading(false);
+      try {
+        const res = await axios.get(`/api/admin/vendors/${id}`);
+        setData(res.data.vendor);
+      } catch (err) {
+        console.error("Failed to load vendor details:", err);
+      } finally {
+        setLoading(false);
+      }
     }
-    load();
+    if (id) load();
   }, [id]);
 
   const approveVendor = async () => {
-    setActionLoading(true);
-    await axios.post(`/api/admin/vendors/${id}/approve`);
-    router.push("/admin/dashboard");
+    try {
+      setActionLoading(true);
+      // Aligned with the correct backend PATCH API endpoint mapping structure
+      const res = await axios.patch(`/api/admin/vendors/review/${id}`);
+      
+      if (res.data.success) {
+        setShowApprove(false);
+        router.push("/admin/dashboard");
+        router.refresh(); // Clear client router layout caches
+      }
+    } catch (err: any) {
+      console.error("Approval error:", err);
+      alert(err.response?.data?.message || "Failed to approve vendor.");
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const rejectVendor = async () => {
     if (!rejectReason.trim()) return;
-    setActionLoading(true);
-    await axios.post(`/api/admin/vendors/${id}/reject`, {
-      reason: rejectReason,
-    });
-    router.push("/admin/dashboard");
+    try {
+      setActionLoading(true);
+      // Ensure rejection endpoints target the uniform parameters if matching
+      await axios.post(`/api/admin/vendors/${id}/reject`, {
+        reason: rejectReason,
+      });
+      setShowReject(false);
+      router.push("/admin/dashboard");
+      router.refresh();
+    } catch (err) {
+      console.error("Rejection error:", err);
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   if (loading)
@@ -205,16 +232,17 @@ function DocPreview({ label, url }: any) {
         {!url && <span className="text-xs text-gray-400">Not uploaded</span>}
 
         {isImage && (
-          <img src={url} className="w-full h-full object-cover" />
+          <img src={url} className="w-full h-full object-cover" alt={label} />
         )}
 
-        {isPdf && <iframe src={url} className="w-full h-full" />}
+        {isPdf && <iframe src={url} className="w-full h-full" title={label} />}
       </div>
 
       {url && (
         <a
           href={url}
           target="_blank"
+          rel="noopener noreferrer"
           className="block text-center text-xs py-2 font-medium hover:bg-gray-100"
         >
           Open full document
@@ -240,18 +268,18 @@ function ConfirmModal({ open, title, description, confirmText, loading, onClose,
             className="bg-white rounded-3xl p-6 w-full max-w-sm"
           >
             <h2 className="text-lg font-bold">{title}</h2>
-            <p className="text-sm text-gray-500 mt-2">{description}</p>
+            <div className="text-sm text-gray-500 mt-2">{description}</div>
 
             <div className="flex gap-3 mt-6">
-              <button onClick={onClose} className="flex-1 py-2 rounded-xl border">
+              <button onClick={onClose} disabled={loading} className="flex-1 py-2 rounded-xl border disabled:opacity-50">
                 Cancel
               </button>
               <button
                 onClick={onConfirm}
                 disabled={loading}
-                className="flex-1 py-2 rounded-xl bg-black text-white"
+                className="flex-1 py-2 rounded-xl bg-black text-white disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {confirmText}
+                {loading ? "Processing..." : confirmText}
               </button>
             </div>
           </motion.div>
@@ -271,7 +299,8 @@ function RejectModal({ open, reason, setReason, loading, onClose, onConfirm }: a
           placeholder="Enter rejection reason (required)"
           value={reason}
           onChange={(e) => setReason(e.target.value)}
-          className="w-full mt-3 border rounded-xl p-3 text-sm"
+          className="w-full mt-3 border rounded-xl p-3 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+          rows={3}
         />
       }
       confirmText="Reject"
