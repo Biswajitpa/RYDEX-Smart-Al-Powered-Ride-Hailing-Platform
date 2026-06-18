@@ -5,13 +5,12 @@ import {
   Phone, Car, User2, ChevronUp,
   Star, MessageCircle, Clock, Zap,
   IndianRupee, XCircle, AlertCircle,
-  CheckCircle2, Loader2,
+  CheckCircle2
 } from "lucide-react";
 import { getSocket } from "@/lib/socket";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import axios from "axios";
 import RideChat from "@/components/RideChat";
 
 const LiveRideMap = dynamic(() => import("@/components/LiveTrackingMap"), { ssr: false });
@@ -66,10 +65,8 @@ const PEEK_H = 140;
 
 /* ══════════════════════════════════════════════════════════════════════ */
 export default function RidePage() {
-  // ✅ Safe param extraction (from second file)
-  const params  = useParams();
+  const { id }  = useParams();
   const router  = useRouter();
-  const id      = params?.id as string;
 
   const [booking,          setBooking]          = useState<BookingDetails | null>(null);
   const [driverPos,        setDriverPos]        = useState<[number, number] | null>(null);
@@ -79,39 +76,30 @@ export default function RidePage() {
   const [etaToPickup,      setEtaToPickup]      = useState(0);
   const [distanceToDrop,   setDistanceToDrop]   = useState(0);
   const [etaToDrop,        setEtaToDrop]        = useState(0);
+  /* chat only for confirmed status */
   const [chatOpen,         setChatOpen]         = useState(false);
   const [expanded,         setExpanded]         = useState(false);
   const [loading,          setLoading]          = useState(true);
   const [error,            setError]            = useState<string | null>(null);
 
-  /* ── FETCH (axios + success-flag guard from second file) ── */
+  /* ── FETCH ── */
   const fetchBooking = async () => {
-    if (!id) return;
     try {
       setLoading(true);
-      setError(null);
-
-      const response = await axios.get(`/api/booking/${id}`);
-
-      // Support both { booking } and { success, ride } response shapes
-      const data: BookingDetails =
-        response.data?.booking ?? response.data?.ride ?? response.data;
-
-      if (!data?._id) throw new Error("Failed to fetch booking metadata.");
-
+      const res  = await fetch(`/api/booking/${id}`);
+      if (!res.ok) throw new Error("Failed to fetch booking");
+      const data = await res.json();
       setBooking(data);
       setPickupPos([data.pickupLocation.coordinates[1], data.pickupLocation.coordinates[0]]);
       setDropPos  ([data.dropLocation.coordinates[1],   data.dropLocation.coordinates[0]]);
-    } catch (err: any) {
-      console.error("🔥 RIDE FETCH EXCEPTION:", err);
-      setError(err?.response?.data?.message || err?.message || "Something went wrong");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ Guard: wait until id is populated (from second file)
-  useEffect(() => { if (id) fetchBooking(); }, [id]);
+  useEffect(() => { fetchBooking(); }, [id]);
 
   /* ── SOCKET ── */
   useEffect(() => {
@@ -121,6 +109,7 @@ export default function RidePage() {
     socket.on("driver-location", (data: any) => setDriverPos([data.latitude, data.longitude]));
     socket.on("booking-updated", (data: any) => {
       setBooking(prev => prev ? { ...prev, ...data } : null);
+      /* close chat if ride moves past confirmed */
       if (data.status && data.status !== "confirmed") setChatOpen(false);
     });
     socket.on("driver-assigned", (data: any) => {
@@ -136,35 +125,27 @@ export default function RidePage() {
   /* ── CANCEL ── */
   const handleCancel = async () => {
     if (!confirm("Cancel this ride?")) return;
-    await axios.post(`/api/booking/${id}/cancel`);
+    await fetch(`/api/booking/${id}/cancel`, { method: "POST" });
     fetchBooking();
   };
 
-  /* ── LOADING (spinner style from second file) ── */
+  /* ── LOADING ── */
   if (loading) return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-3">
-      <Loader2 className="animate-spin text-amber-500 w-10 h-10" />
-      <p className="text-zinc-400 text-sm tracking-widest uppercase font-medium">Locating your ride…</p>
+    <div className="h-screen w-full bg-zinc-950 flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-12 h-12 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+        <p className="text-white/40 text-sm tracking-widest uppercase font-medium">Loading ride…</p>
+      </div>
     </div>
   );
 
-  /* ── ERROR (layout from second file, icons from first) ── */
   if (error || !booking) return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-6 text-center">
-      <div className="max-w-md w-full space-y-5">
-        <div className="flex justify-center">
-          <div className="p-3 bg-red-950/40 rounded-full border border-red-500/30">
-            <AlertCircle className="text-red-500 w-10 h-10" />
-          </div>
-        </div>
-        <div className="space-y-1">
-          <h1 className="text-white text-xl font-bold tracking-tight">Failed to load ride</h1>
-          <p className="text-zinc-400 text-sm">{error || "Booking not found"}</p>
-        </div>
-        <button
-          onClick={() => router.back()}
-          className="px-6 py-2.5 bg-white text-zinc-900 hover:bg-zinc-100 transition font-semibold rounded-lg text-sm shadow-md"
-        >
+    <div className="h-screen w-full bg-zinc-950 flex items-center justify-center px-6">
+      <div className="flex flex-col items-center gap-4 text-center">
+        <AlertCircle size={48} className="text-red-400" />
+        <p className="text-white font-bold text-lg">Failed to load ride</p>
+        <p className="text-zinc-400 text-sm">{error || "Booking not found"}</p>
+        <button onClick={() => router.back()} className="mt-2 bg-white text-zinc-900 px-6 py-3 rounded-xl font-semibold text-sm">
           Go Back
         </button>
       </div>
@@ -177,16 +158,25 @@ export default function RidePage() {
   const isActive    = ["requested", "awaiting_payment", "confirmed", "started"].includes(status);
   const isFailed    = ["cancelled", "rejected", "expired"].includes(status);
   const isCompleted = status === "completed";
+  /* chat only when driver heading to pickup, not yet started */
   const canChat     = status === "confirmed";
   const showDriver  = ["confirmed", "started", "completed"].includes(status) && !!booking.driver;
   const displayEta      = mapStatus === "arriving" ? etaToPickup : etaToDrop;
   const displayDistance = mapStatus === "arriving" ? distanceToPickup : distanceToDrop;
 
-  /* ══ COMPLETED ══ */
-  if (isCompleted) return <CompletedScreen booking={booking} router={router} />;
+  /* ══ COMPLETED — FULL SCREEN ══ */
+  if (isCompleted) {
+    return (
+      <CompletedScreen booking={booking} router={router} />
+    );
+  }
 
-  /* ══ FAILED ══ */
-  if (isFailed) return <FailedScreen booking={booking} status={status} cfg={cfg} router={router} />;
+  /* ══ FAILED — FULL SCREEN ══ */
+  if (isFailed) {
+    return (
+      <FailedScreen booking={booking} status={status} cfg={cfg} router={router} />
+    );
+  }
 
   const panelProps = {
     booking, status, cfg, isActive, canChat, showDriver,
@@ -309,12 +299,17 @@ function CompletedScreen({ booking, router }: { booking: BookingDetails; router:
 
   return (
     <motion.div
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
       className="h-screen w-full bg-zinc-950 flex flex-col overflow-y-auto"
     >
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
+
+        {/* Icon */}
         <motion.div
-          initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+          initial={{ scale: 0.5, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
           className="mb-8"
         >
@@ -326,7 +321,8 @@ function CompletedScreen({ booking, router }: { booking: BookingDetails; router:
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.5 }}
           className="w-full max-w-sm"
         >
@@ -334,6 +330,7 @@ function CompletedScreen({ booking, router }: { booking: BookingDetails; router:
           <h1 className="text-white text-3xl font-black text-center mb-1">You've Arrived!</h1>
           <p className="text-zinc-500 text-sm text-center mb-8">Thank you for riding with us.</p>
 
+          {/* Fare card */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 mb-3">
             <p className="text-zinc-500 text-[10px] uppercase tracking-widest font-semibold mb-1 text-center">Total Fare</p>
             <p className="text-white text-5xl font-black flex items-center justify-center gap-1 mb-4">
@@ -347,6 +344,7 @@ function CompletedScreen({ booking, router }: { booking: BookingDetails; router:
             </div>
           </div>
 
+          {/* Driver card */}
           {booking.driver && (
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 flex items-center gap-3 mb-3">
               <div className="w-11 h-11 rounded-xl bg-zinc-800 flex items-center justify-center flex-shrink-0">
@@ -364,6 +362,7 @@ function CompletedScreen({ booking, router }: { booking: BookingDetails; router:
             </div>
           )}
 
+          {/* Route */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden mb-6">
             <div className="flex gap-3 p-4 border-b border-zinc-800">
               <div className="flex flex-col items-center flex-shrink-0 pt-1">
@@ -386,6 +385,7 @@ function CompletedScreen({ booking, router }: { booking: BookingDetails; router:
             </div>
           </div>
 
+          {/* Rating */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 mb-4">
             <p className="text-zinc-400 text-sm font-semibold text-center mb-3">How was your experience?</p>
             <div className="flex justify-center gap-2 mb-3">
@@ -436,18 +436,21 @@ function CompletedScreen({ booking, router }: { booking: BookingDetails; router:
 }
 
 /* ══════════════════════════════════════════════════════════════════════
-   FAILED FULL SCREEN
+   FAILED FULL SCREEN (cancelled / rejected / expired)
 ══════════════════════════════════════════════════════════════════════ */
 function FailedScreen({ booking, status, cfg, router }: { booking: BookingDetails; status: BookingStatus; cfg: any; router: any }) {
   const isExpired = status === "expired";
 
   return (
     <motion.div
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
       className="h-screen w-full bg-zinc-950 flex flex-col items-center justify-center px-6"
     >
       <motion.div
-        initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+        initial={{ scale: 0.5, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
         className="mb-8"
       >
@@ -462,13 +465,15 @@ function FailedScreen({ booking, status, cfg, router }: { booking: BookingDetail
       </motion.div>
 
       <motion.div
-        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2, duration: 0.5 }}
         className="w-full max-w-sm text-center"
       >
         <h1 className="text-white text-2xl font-black mb-2">{cfg.label}</h1>
         <p className="text-zinc-500 text-sm mb-8">{cfg.sublabel}</p>
 
+        {/* Route recap */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden mb-6 text-left">
           <div className="flex gap-3 p-4 border-b border-zinc-800">
             <div className="flex flex-col items-center flex-shrink-0 pt-1">
@@ -519,7 +524,7 @@ function PanelContent({
   return (
     <div className="flex flex-col pt-5 pb-6 gap-3">
 
-      {/* SEARCHING */}
+      {/* SEARCHING (requested) */}
       {status === "requested" && (
         <div className="mx-5 lg:mx-6">
           <div className="bg-zinc-50 border border-zinc-100 rounded-2xl p-5 flex items-center gap-4">
@@ -532,7 +537,7 @@ function PanelContent({
         </div>
       )}
 
-      {/* PAYMENT */}
+      {/* PAYMENT (awaiting_payment) */}
       {status === "awaiting_payment" && (
         <div className="mx-5 lg:mx-6">
           <div className="bg-purple-950 rounded-2xl p-5">
@@ -548,7 +553,7 @@ function PanelContent({
         </div>
       )}
 
-      {/* ETA + FARE */}
+      {/* ETA + FARE (active, not requested/payment) */}
       {isActive && !["requested", "awaiting_payment"].includes(status) && (
         <div className="mx-5 lg:mx-6 grid grid-cols-2 gap-2">
           <div className="bg-zinc-50 border border-zinc-100 rounded-2xl p-4 flex items-center gap-3">
@@ -607,6 +612,7 @@ function PanelContent({
             </div>
           </div>
 
+          {/* Call always when active; Message only when canChat */}
           {isActive && (
             <div className="flex gap-2 mt-2">
               {booking.driverMobileNumber && (
@@ -629,7 +635,7 @@ function PanelContent({
         </motion.div>
       )}
 
-      {/* CHAT */}
+      {/* CHAT — confirmed only */}
       <AnimatePresence>
         {chatOpen && canChat && (
           <motion.div key="chat"
@@ -692,6 +698,9 @@ function PanelContent({
           </div>
         </div>
       )}
+
+      {/* CANCEL BUTTON */}
+     
 
     </div>
   );
