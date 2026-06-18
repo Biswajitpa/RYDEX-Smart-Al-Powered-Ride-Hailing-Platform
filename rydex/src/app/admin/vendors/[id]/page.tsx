@@ -46,17 +46,21 @@ export default function AdminVendorReviewPage() {
   const approveVendor = async () => {
     try {
       setActionLoading(true);
-      // Fixed: Targets your exact folder structure using POST method
       const res = await axios.post(`/api/admin/vendors/${id}/approve`);
       
-      if (res.data) {
+      if (res.data.success) {
         setShowApprove(false);
         router.push("/admin/dashboard");
-        router.refresh(); // Clear Next.js client-side route cache
+        router.refresh(); 
       }
     } catch (err: any) {
-      console.error("Approval error:", err);
-      alert(err.response?.data?.message || "Failed to approve vendor.");
+      console.error("Approval error details:", err);
+      
+      // Extracts the precise technical error response message sent by your backend route
+      const status = err.response?.status || "Unknown Status";
+      const errorMsg = err.response?.data?.message || err.message || "No specific error message returned";
+      
+      alert(`Error (${status}): ${errorMsg}`);
     } finally {
       setActionLoading(false);
     }
@@ -66,7 +70,6 @@ export default function AdminVendorReviewPage() {
     if (!rejectReason.trim()) return;
     try {
       setActionLoading(true);
-      // Fixed: Targets your exact rejection route structure using POST method
       const res = await axios.post(`/api/admin/vendors/${id}/reject`, {
         reason: rejectReason,
       });
@@ -77,8 +80,12 @@ export default function AdminVendorReviewPage() {
         router.refresh();
       }
     } catch (err: any) {
-      console.error("Rejection error:", err);
-      alert(err.response?.data?.message || "Failed to reject vendor.");
+      console.error("Rejection error details:", err);
+      
+      const status = err.response?.status || "Unknown Status";
+      const errorMsg = err.response?.data?.message || err.message || "No specific error message returned";
+      
+      alert(`Error (${status}): ${errorMsg}`);
     } finally {
       setActionLoading(false);
     }
