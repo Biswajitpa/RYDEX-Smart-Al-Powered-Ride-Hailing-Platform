@@ -17,6 +17,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
+import axios from "axios";
 
 export default function VideoKYCPage() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -28,13 +29,11 @@ export default function VideoKYCPage() {
   const router = useRouter();
   const { userData } = useSelector((state: RootState) => state.user);
 
-  // ✅ FIX 1: Extract 'id' since your Next.js dynamic routing folder path is named [id]
-  const dynamicId = params?.id || params?.roomId;
   const roomId =
-    typeof dynamicId === "string"
-      ? dynamicId
-      : Array.isArray(dynamicId)
-      ? dynamicId[0]
+    typeof params?.roomId === "string"
+      ? params.roomId
+      : Array.isArray(params?.roomId)
+      ? params.roomId[0]
       : null;
 
   const isAdmin = userData?.role === "admin";
@@ -51,6 +50,68 @@ export default function VideoKYCPage() {
   const [actionLoading, setActionLoading] = useState(false);
 
   /* ================= CAMERA PREVIEW ================= */
+
+
+const handleApprove = async () => {
+  try {
+    setActionLoading(true);
+
+    const res = await fetch("/api/admin/vendors/video-kyc/complete", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        roomId,
+        action: "approve",
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message);
+
+    zpRef.current?.destroy(); // auto end call
+    router.push("/admin/dashboard");
+  } catch (err: any) {
+    alert(err.message);
+  } finally {
+    setActionLoading(false);
+  }
+};
+
+const handleReject = async () => {
+  if (!rejectReason.trim()) {
+    alert("Rejection reason required");
+    return;
+  }
+
+  try {
+    setActionLoading(true);
+
+    const res = await fetch("/api/admin/vendors/video-kyc/complete", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        roomId,
+        action: "reject",
+        reason: rejectReason,
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message);
+
+    zpRef.current?.destroy();
+    router.push("/admin/dashboard");
+  } catch (err: any) {
+    alert(err.message);
+  } finally {
+    setActionLoading(false);
+  }
+};
+
   useEffect(() => {
     if (joined) return;
 
@@ -68,7 +129,7 @@ export default function VideoKYCPage() {
           previewRef.current.srcObject = localStream;
         }
       } catch (err) {
-        console.error("Local media capture failed:", err);
+        console.error(err);
       }
     };
 
@@ -81,23 +142,24 @@ export default function VideoKYCPage() {
 
   const toggleCamera = () => {
     if (!stream) return;
-    stream.getVideoTracks().forEach((track) => (track.enabled = !cameraOn));
+    stream.getVideoTracks().forEach(
+      (track) => (track.enabled = !cameraOn)
+    );
     setCameraOn(!cameraOn);
   };
 
   const toggleMic = () => {
     if (!stream) return;
-    stream.getAudioTracks().forEach((track) => (track.enabled = !micOn));
+    stream.getAudioTracks().forEach(
+      (track) => (track.enabled = !micOn)
+    );
     setMicOn(!micOn);
   };
 
   /* ================= START CALL ================= */
+
   const startCall = async () => {
-    // ✅ FIX 2: Stop execution if the room tracking token parameter is missing
-    if (!roomId || !containerRef.current) {
-      alert("Error: Room identifier parameter missing from route URL parsing mapping.");
-      return;
-    }
+    if (!roomId || !containerRef.current) return;
     if (joinedRef.current) return;
 
     joinedRef.current = true;
@@ -105,30 +167,23 @@ export default function VideoKYCPage() {
 
     try {
       const appID = Number(process.env.NEXT_PUBLIC_ZEGO_APP_ID);
-      const serverSecret = process.env.NEXT_PUBLIC_ZEGO_SERVER_SECRET;
-
-      // ✅ FIX 3: Raise error safely if environment keys are missing in production environment variables panel
-      if (!appID || !serverSecret) {
-        throw new Error("ZegoCloud credentials missing from production environment variables.");
-      }
+      const serverSecret =
+        process.env.NEXT_PUBLIC_ZEGO_SERVER_SECRET;
 
       const displayName = isAdmin
         ? "Admin"
-        : `${userData?.name || "Vendor"} (${userData?.email || "Verification"})`;
+        : `${userData?.name} (${userData?.email})`;
 
-      // Fallback unique handle to guarantee execution context parameters
-      const userId = userData?._id ? userData._id.toString() : `user_${Date.now()}`;
+      const userId = userData?._id.toString()!;
 
-      // ✅ FIX 4: Sanitize the roomId to follow strict alphanumeric requirements from Zego servers
-      const sanitizedRoomId = roomId.replace(/[^a-zA-Z0-9-_]/g, "");
-
-      const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
-        appID,
-        serverSecret,
-        sanitizedRoomId,
-        userId,
-        displayName
-      );
+      const kitToken =
+        ZegoUIKitPrebuilt.generateKitTokenForTest(
+          appID,
+          serverSecret!,
+          roomId,
+          userId,
+          displayName
+        );
 
       const zp = ZegoUIKitPrebuilt.create(kitToken);
       zpRef.current = zp;
@@ -142,82 +197,32 @@ export default function VideoKYCPage() {
       });
 
       setJoined(true);
-    } catch (err: any) {
-      console.error("🔴 ZEGOCLOUD AUTH ERROR:", err);
-      alert(`Connection Error: ${err.message}`);
+    } catch (err) {
+      console.error(err);
       joinedRef.current = false;
-    } certify {
+    } finally {
       setLoading(false);
     }
   };
 
   /* ================= ADMIN ACTIONS ================= */
-  const handleApprove = async () => {
-    try {
-      setActionLoading(true);
 
-      const res = await fetch("/api/admin/vendors/video-kyc/complete", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          roomId,
-          action: "approve",
-        }),
-      });
+  
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
+ 
 
-      zpRef.current?.destroy(); 
-      router.push("/admin/dashboard");
-    } catch (err: any) {
-      alert(err.message);
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleReject = async () => {
-    if (!rejectReason.trim()) {
-      alert("Rejection reason required");
-      return;
-    }
-
-    try {
-      setActionLoading(true);
-
-      const res = await fetch("/api/admin/vendors/video-kyc/complete", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          roomId,
-          action: "reject",
-          reason: rejectReason,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
-
-      zpRef.current?.destroy();
-      router.push("/admin/dashboard");
-    } catch (err: any) {
-      alert(err.message);
-    } finally {
-      setActionLoading(false);
-    }
-  };
+  /* ================= UI ================= */
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
+
       {/* HEADER */}
       <header className="px-6 py-4 border-b border-white/10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+
         <div>
-          <p className="font-semibold tracking-wider">RYDEX</p>
+          <p className="font-semibold tracking-wider">
+            RYDEX
+          </p>
           <p className="text-xs text-gray-400">
             {isAdmin ? "Admin Verification" : "Vendor Video KYC"}
           </p>
@@ -226,6 +231,7 @@ export default function VideoKYCPage() {
         {/* HEADER ACTIONS */}
         {joined && (
           <div className="flex flex-wrap gap-3">
+
             {isAdmin && (
               <>
                 <button
@@ -253,20 +259,25 @@ export default function VideoKYCPage() {
               <PhoneOff size={16} />
               End Call
             </button>
+
           </div>
         )}
       </header>
 
-      {/* BODY CONTAINER */}
+      {/* BODY */}
       <div className="flex-1 relative">
+
         <div
           ref={containerRef}
-          className={`absolute inset-0 ${joined ? "block" : "hidden"}`}
+          className={`absolute inset-0 ${
+            joined ? "block" : "hidden"
+          }`}
         />
 
         {!joined && (
           <div className="h-full flex items-center justify-center px-4 py-10">
             <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+
               <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-white/5">
                 <video
                   ref={previewRef}
@@ -284,7 +295,9 @@ export default function VideoKYCPage() {
               </div>
 
               <div className="space-y-8 text-center lg:text-left">
-                <h1 className="text-3xl sm:text-4xl font-bold">Secure Video KYC</h1>
+                <h1 className="text-3xl sm:text-4xl font-bold">
+                  Secure Video KYC
+                </h1>
 
                 <div className="flex justify-center lg:justify-start gap-6">
                   <button
@@ -313,12 +326,12 @@ export default function VideoKYCPage() {
                 <button
                   onClick={startCall}
                   disabled={loading}
-                  className="w-full bg-white text-black py-4 rounded-xl font-semibold hover:bg-gray-200 transition"
+                  className="w-full bg-white text-black py-4 rounded-xl font-semibold"
                 >
                   {loading ? (
                     <span className="flex justify-center items-center gap-2">
                       <Loader2 className="animate-spin" size={18} />
-                      Connecting Stream...
+                      Connecting...
                     </span>
                   ) : (
                     "Join Secure Call"
@@ -330,22 +343,23 @@ export default function VideoKYCPage() {
         )}
       </div>
 
-      {/* APPROVE CONFIRMATION MODAL */}
+      {/* APPROVE MODAL */}
       <AnimatePresence>
         {showApproveModal && (
           <Modal onClose={() => setShowApproveModal(false)}>
-            <h2 className="text-lg font-semibold mb-4">Confirm Approval</h2>
+            <h2 className="text-lg font-semibold mb-4">
+              Confirm Approval
+            </h2>
             <div className="flex gap-4">
               <button
                 onClick={() => setShowApproveModal(false)}
-                className="flex-1 border border-white/20 rounded-xl py-2 hover:bg-white/5 transition"
+                className="flex-1 border rounded-xl py-2"
               >
                 Cancel
               </button>
               <button
                 onClick={handleApprove}
-                disabled={actionLoading}
-                className="flex-1 bg-green-600 rounded-xl py-2 font-medium hover:bg-green-700 transition"
+                className="flex-1 bg-green-600 rounded-xl py-2"
               >
                 {actionLoading ? "Processing..." : "Approve"}
               </button>
@@ -358,25 +372,26 @@ export default function VideoKYCPage() {
       <AnimatePresence>
         {showRejectModal && (
           <Modal onClose={() => setShowRejectModal(false)}>
-            <h2 className="text-lg font-semibold mb-4">Reject Vendor</h2>
+            <h2 className="text-lg font-semibold mb-4">
+              Reject Vendor
+            </h2>
             <textarea
               value={rejectReason}
-              placeholder="Provide clear reasons for verification failure..."
-              onChange={(e) => setRejectReason(e.target.value)}
-              className="w-full bg-white/10 border border-white/20 rounded-xl p-3 mb-4 text-sm focus:outline-none focus:border-white/40"
-              rows={4}
+              onChange={(e) =>
+                setRejectReason(e.target.value)
+              }
+              className="w-full bg-white/10 border border-white/20 rounded-xl p-3 mb-4 text-sm"
             />
             <div className="flex gap-4">
               <button
                 onClick={() => setShowRejectModal(false)}
-                className="flex-1 border border-white/20 rounded-xl py-2 hover:bg-white/5 transition"
+                className="flex-1 border rounded-xl py-2"
               >
                 Cancel
               </button>
               <button
                 onClick={handleReject}
-                disabled={actionLoading}
-                className="flex-1 bg-red-600 rounded-xl py-2 font-medium hover:bg-red-700 transition"
+                className="flex-1 bg-red-600 rounded-xl py-2"
               >
                 {actionLoading ? "Processing..." : "Reject"}
               </button>
@@ -405,15 +420,15 @@ function Modal({
       <motion.div
         initial={{ scale: 0.9 }}
         animate={{ scale: 1 }}
-        exit={{ scale: 0.9 }}
-        className="relative bg-[#111] w-full max-w-md rounded-2xl p-6 shadow-2xl border border-white/10"
+        className="relative bg-[#111] w-full max-w-md rounded-2xl p-6 shadow-2xl"
       >
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-white transition"
+          className="absolute top-4 right-4 text-gray-400"
         >
           <X size={16} />
         </button>
+
         {children}
       </motion.div>
     </motion.div>
