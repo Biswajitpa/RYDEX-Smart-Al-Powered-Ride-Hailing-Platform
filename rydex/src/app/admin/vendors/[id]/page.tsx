@@ -46,13 +46,13 @@ export default function AdminVendorReviewPage() {
   const approveVendor = async () => {
     try {
       setActionLoading(true);
-      // Aligned with the correct backend PATCH API endpoint mapping structure
-      const res = await axios.patch(`/api/admin/vendors/review/${id}`);
+      // Fixed: Targets your exact folder structure using POST method
+      const res = await axios.post(`/api/admin/vendors/${id}/approve`);
       
-      if (res.data.success) {
+      if (res.data) {
         setShowApprove(false);
         router.push("/admin/dashboard");
-        router.refresh(); // Clear client router layout caches
+        router.refresh(); // Clear Next.js client-side route cache
       }
     } catch (err: any) {
       console.error("Approval error:", err);
@@ -66,15 +66,19 @@ export default function AdminVendorReviewPage() {
     if (!rejectReason.trim()) return;
     try {
       setActionLoading(true);
-      // Ensure rejection endpoints target the uniform parameters if matching
-      await axios.post(`/api/admin/vendors/${id}/reject`, {
+      // Fixed: Targets your exact rejection route structure using POST method
+      const res = await axios.post(`/api/admin/vendors/${id}/reject`, {
         reason: rejectReason,
       });
-      setShowReject(false);
-      router.push("/admin/dashboard");
-      router.refresh();
-    } catch (err) {
+
+      if (res.data) {
+        setShowReject(false);
+        router.push("/admin/dashboard");
+        router.refresh();
+      }
+    } catch (err: any) {
       console.error("Rejection error:", err);
+      alert(err.response?.data?.message || "Failed to reject vendor.");
     } finally {
       setActionLoading(false);
     }
