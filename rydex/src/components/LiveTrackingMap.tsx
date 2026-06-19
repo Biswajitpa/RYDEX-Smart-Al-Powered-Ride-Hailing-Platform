@@ -90,7 +90,7 @@ function AutoFollow({ pos }: { pos: [number, number] | null }) {
   const map = useMap();
   useEffect(() => {
     if (pos) {
-      const z = map.getZoom() < 15 ? 15 : map.getZoom();
+      const z = map.getZoom() < 13 ? 13 : map.getZoom();
       map.flyTo(pos, z, { duration: 0.7, easeLinearity: 0.25 });
     }
   }, [pos, map]);
@@ -111,13 +111,6 @@ export default function LiveRideMap({
   const prevLocation = useRef<[number, number] | null>(null);
   const prevStatus   = useRef<string | null>(null);
 
-  /*
-   * Status-based display logic:
-   *
-   * arriving  → show pickup marker + dashed line to pickup + solid line to drop
-   * ongoing   → hide pickup marker, clear pickup route, solid line to drop only
-   * completed → hide both routes, show only drop marker (and driver position)
-   */
   const showPickupMarker = status === "arriving";
   const showPickupRoute  = status === "arriving" && routeToPickup.length > 0;
   const showDropRoute    = status !== "completed" && routeToDrop.length > 0;
@@ -129,68 +122,78 @@ export default function LiveRideMap({
   };
 
   useEffect(() => {
-    if (!driverLocation) return;
+    // Fallback handler if driver coordinates fail to load down your context streams
+    const activeDriverLoc = driverLocation || pickupLocation;
+
+    if (!activeDriverLoc) return;
 
     const base = "https://router.project-osrm.org/route/v1/driving/";
     const qs   = "?overview=full&geometries=geojson";
-    const [dlat, dlng]   = driverLocation;
+    const [dlat, dlng]   = activeDriverLoc;
     const [plat, plng]   = pickupLocation;
     const [drlat, drlng] = dropLocation;
+
+    console.log("🗺️ OSRM Network Fetch - Driver:", activeDriverLoc, "Pickup:", pickupLocation, "Drop:", dropLocation);
 
     const statusChanged = prevStatus.current !== status;
     prevStatus.current  = status;
 
     if (status === "arriving") {
-      // Fetch route to pickup AND route to drop (for ETA display)
       Promise.all([
         fetch(`${base}${dlng},${dlat};${plng},${plat}${qs}`).then(r => r.json()),
         fetch(`${base}${dlng},${dlat};${drlng},${drlat}${qs}`).then(r => r.json()),
-      ]).then(([pData, dData]) => {
-        if (pData.routes?.length)
-          setRouteToPickup(
-            pData.routes[0].geometry.coordinates.map(([lon, lat]: number[]) => [lat, lon])
-          );
-        if (dData.routes?.length)
-          setRouteToDrop(
-            dData.routes[0].geometry.coordinates.map(([lon, lat]: number[]) => [lat, lon])
-          );
-        onStats?.({
-          distanceToPickup: (pData.routes?.[0]?.distance ?? 0) / 1000,
-          durationToPickup: (pData.routes?.[0]?.duration ?? 0) / 60,
-          distanceToDrop:   (dData.routes?.[0]?.distance ?? 0) / 1000,
-          durationToDrop:   (dData.routes?.[0]?.duration ?? 0) / 60,
-        });
-      });
+      ])
+        .then(([pData, dData]) => {
+          if (pData.routes?.length) {
+            setRouteToPickup(
+              pData.routes[0].geometry.coordinates.map(([lon, lat]: number[]) => [lat, lon])
+            );
+          }
+          if (dData.routes?.length) {
+            setRouteToDrop(
+              dData.routes[0].geometry.coordinates.map(([lon, lat]: number[]) => [lat, lon])
+            );
+          }
+          onStats?.({
+            distanceToPickup: (pData.routes?.[0]?.distance ?? 0) / 1000,
+            durationToPickup: (pData.routes?.[0]?.duration ?? 0) / 60,
+            distanceToDrop:   (dData.routes?.[0]?.distance ?? 0) / 1000,
+            durationToDrop:   (dData.routes?.[0]?.duration ?? 0) / 60,
+          });
+        })
+        .catch(err => console.error("OSRM Multi Route Fetch Error:", err));
 
     } else {
-      // ongoing / completed — only need driver→drop
-      // Clear pickup route immediately when status changes away from arriving
       if (statusChanged) setRouteToPickup([]);
 
       fetch(`${base}${dlng},${dlat};${drlng},${drlat}${qs}`)
         .then(r => r.json())
         .then(dData => {
-          if (dData.routes?.length)
+          if (dData.routes?.length) {
             setRouteToDrop(
               dData.routes[0].geometry.coordinates.map(([lon, lat]: number[]) => [lat, lon])
             );
+          }
           onStats?.({
             distanceToPickup: 0,
             durationToPickup: 0,
             distanceToDrop:   (dData.routes?.[0]?.distance ?? 0) / 1000,
             durationToDrop:   (dData.routes?.[0]?.duration ?? 0) / 60,
           });
-        });
+        })
+        .catch(err => console.error("OSRM Single Route Fetch Error:", err));
     }
 
-    if (prevLocation.current) rotateCar(prevLocation.current, driverLocation);
+    if (prevLocation.current && driverLocation) rotateCar(prevLocation.current, driverLocation);
     prevLocation.current = driverLocation;
-  }, [driverLocation, status]);
+
+    // ✅ FIXED: Added all tracking coordinate dependencies to run calculations dynamically
+  }, [driverLocation, pickupLocation, dropLocation, status]);
 
   return (
     <MapContainer
       center={pickupLocation}
-      zoom={14}
+      zoom={12}
       style={{ height: "100%", width: "100%" }}
       scrollWheelZoom
       zoomControl={false}
@@ -213,27 +216,27 @@ export default function LiveRideMap({
         </Marker>
       )}
 
-      {/* Pickup marker — only while driver is still arriving */}
+      {/* Pickup marker */}
       {showPickupMarker && (
         <Marker position={pickupLocation} icon={pickupIcon} />
       )}
 
-      {/* Drop marker — always visible */}
+      {/* Drop marker */}
       <Marker position={dropLocation} icon={dropIcon} />
 
-      {/* Dashed line → pickup (arriving only) */}
+      {/* Dashed line → pickup */}
       {showPickupRoute && (
         <Polyline
           positions={routeToPickup}
-          pathOptions={{ color: "#888", weight: 4, dashArray: "2 10", lineCap: "round" }}
+          pathOptions={{ color: "#666", weight: 4, dashArray: "4 8", lineCap: "round" }}
         />
       )}
 
-      {/* Solid line → drop (arriving + ongoing) */}
+      {/* Solid line → drop */}
       {showDropRoute && (
         <Polyline
           positions={routeToDrop}
-          pathOptions={{ color: "#0a0a0a", weight: 5, lineCap: "round", lineJoin: "round" }}
+          pathOptions={{ color: "#000000", weight: 5, lineCap: "round", lineJoin: "round" }}
         />
       )}
     </MapContainer>
