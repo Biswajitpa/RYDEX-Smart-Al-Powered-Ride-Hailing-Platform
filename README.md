@@ -108,3 +108,6 @@ This project simulates a production-level mobility system with real-world archit
 ## DEMO VIDEO 
 https://drive.google.com/file/d/1M6gp-WgwNSNYZbsABlcvqf2kXTqDKwCO/view?usp=sharing
 
+## admin
+https://rydex-smart-al-powered-ride-hailing-rho.vercel.app/admin/dashboard
+
