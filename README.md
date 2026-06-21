@@ -111,3 +111,13 @@ https://drive.google.com/file/d/1M6gp-WgwNSNYZbsABlcvqf2kXTqDKwCO/view?usp=shari
 ## admin
 https://rydex-smart-al-powered-ride-hailing-rho.vercel.app/admin/dashboard
 
+### 👨‍💻 Author
+
+**Biswajit Pattanaik**
+
+Full-Stack Developer | UI/UX Designer | Backend Engineer | Frontend Developer | System Administrator | Deployment & DevOps Engineer
+
+Designed, developed, and deployed the complete application, including system architecture, user experience, frontend, backend, and production infrastructure.
+
+
+
