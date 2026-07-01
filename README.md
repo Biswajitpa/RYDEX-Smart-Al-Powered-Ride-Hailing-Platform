@@ -1,5 +1,9 @@
 <p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:00F7FF,50:2E7CF6,100:0055FF&height=220&section=header&text=RYDEX%20Mobility%20Platform&fontSize=42&fontColor=ffffff&animation=fadeIn&fontAlignY=35&desc=Enterprise-Grade%20AI-Powered%20Ride-Hailing%20%26%20Mobility%20Infrastructure&descAlignY=55&descSize=16"/>
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:0055FF,100:00F7FF&height=200&section=header&text=RYDEX%20Mobility%20Platform&fontSize=38&fontColor=ffffff&animation=fadeIn&fontAlignY=35" width="100%"/>
+</p>
+
+<p align="center">
+  <b>Enterprise-Grade AI-Powered Ride-Hailing &amp; Mobility Infrastructure</b>
 </p>
 
 <p align="center">
@@ -233,5 +237,5 @@ RYDEX is built on the belief that a portfolio project should be held to **produc
 Designed, engineered, and deployed the **entire RYDEX platform** end-to-end — system architecture, backend services, frontend experience, security model, and production infrastructure — as a single-owner, production-grade build.
 
 <p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:0055FF,100:00F7FF&height=100&section=footer"/>
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:0055FF,100:00F7FF&height=100&section=footer" width="100%"/>
 </p>
