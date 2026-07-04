@@ -69,9 +69,6 @@ The result is a platform engineered for **horizontal scale, auditability, and se
 
 RYDEX follows a **layered, service-oriented architecture** — cleanly separating identity, ride orchestration, payments, and analytics into independently reasoned-about domains, laying the groundwork for a future microservices migration.
 
-<p align="center">
-  <img width="380" alt="System Architecture" src="https://github.com/user-attachments/assets/9135d824-3133-45fc-a288-a1d2ee1f79d3" />
-</p>
 
 <p align="center">
   <img width="720" alt="System Design Architecture" src="https://github.com/user-attachments/assets/2dea51fc-5522-4e76-a0d3-277ebd2cbaa3" />
