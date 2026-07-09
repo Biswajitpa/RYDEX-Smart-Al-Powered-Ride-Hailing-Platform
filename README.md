@@ -69,10 +69,101 @@ The result is a platform engineered for **horizontal scale, auditability, and se
 
 RYDEX follows a **layered, service-oriented architecture** — cleanly separating identity, ride orchestration, payments, and analytics into independently reasoned-about domains, laying the groundwork for a future microservices migration.
 
+```mermaid
+flowchart TB
+    subgraph Clients["🖥️ Client Applications"]
+        U[Rider App<br/>Next.js]
+        D[Driver App<br/>Next.js]
+        A[Admin Dashboard<br/>Next.js]
+    end
 
-<p align="center">
-  <img width="720" alt="System Design Architecture" src="https://github.com/user-attachments/assets/2dea51fc-5522-4e76-a0d3-277ebd2cbaa3" />
-</p>
+    subgraph Gateway["🌐 API Gateway Layer"]
+        RL[Rate Limiter<br/>OTP · Login · Booking]
+        LB[Load Balancer]
+    end
+
+    subgraph Core["⚙️ Core Services — Node.js / Express"]
+        AUTH[Auth Service<br/>JWT · OAuth 2.0 · OTP]
+        RIDE[Ride Orchestration Engine<br/>Matching · Routing · Lifecycle]
+        VENDOR[Vendor Compliance Service<br/>KYC · Document Verification]
+        PAY[Payment Service<br/>UPI · Fare Engine]
+        NOTIFY[Notification Service<br/>Push · Chat · Call]
+    end
+
+    subgraph RealTime["⚡ Real-Time Layer"]
+        WS[WebSocket Server<br/>Live GPS · Live Chat]
+    end
+
+    subgraph Data["🗄️ Data Layer"]
+        DB[(Primary Database<br/>Users · Rides · Vendors)]
+        CACHE[(Cache Layer<br/>Driver Locations)]
+    end
+
+    subgraph External["🔌 External Services"]
+        GOOGLE[Google OAuth 2.0]
+        ZEGO[Zego Cloud<br/>Video KYC]
+        MAPS[Maps / GPS Provider]
+        UPI[UPI Payment Gateway]
+    end
+
+    U & D & A --> LB --> RL
+    RL --> AUTH & RIDE & VENDOR & PAY & NOTIFY
+    RIDE <--> WS
+    U & D -. live location .-> WS
+    AUTH --> DB
+    RIDE --> DB
+    RIDE --> CACHE
+    VENDOR --> DB
+    PAY --> DB
+    AUTH -.-> GOOGLE
+    VENDOR -.-> ZEGO
+    RIDE -.-> MAPS
+    PAY -.-> UPI
+
+    style Clients fill:#0d1b2a,color:#fff,stroke:#00F7FF,stroke-width:2px
+    style Gateway fill:#1b263b,color:#fff,stroke:#00F7FF,stroke-width:2px
+    style Core fill:#0055FF,color:#fff,stroke:#00F7FF,stroke-width:2px
+    style RealTime fill:#274690,color:#fff,stroke:#00F7FF,stroke-width:2px
+    style Data fill:#003566,color:#fff,stroke:#00F7FF,stroke-width:2px
+    style External fill:#14213d,color:#fff,stroke:#00F7FF,stroke-width:2px
+```
+
+### Ride Lifecycle — Sequence Flow
+
+```mermaid
+sequenceDiagram
+    participant R as Rider App
+    participant G as API Gateway
+    participant RE as Ride Engine
+    participant WS as WebSocket Server
+    participant Dr as Driver App
+    participant P as Payment Service
+
+    R->>G: Request ride (pickup, drop, GPS)
+    G->>RE: Forward ride request
+    RE->>RE: Shortest-path + nearest-driver match
+    RE->>WS: Broadcast ride offer
+    WS->>Dr: Notify nearest available driver
+    Dr->>WS: Accept ride
+    WS->>R: Driver assigned + live ETA
+    Dr->>R: Arrives at pickup
+    R->>Dr: Share Pickup OTP
+    Dr->>RE: Verify Pickup OTP
+    RE-->>WS: Ride status → in-transit
+    loop During ride
+        Dr->>WS: Stream GPS location
+        WS->>R: Live location update
+    end
+    Dr->>R: Arrives at destination
+    R->>Dr: Share Drop OTP
+    Dr->>RE: Verify Drop OTP
+    RE->>P: Trigger fare settlement
+    P->>R: UPI payment request
+    R->>P: Payment confirmation
+    P-->>RE: Mark ride completed
+    RE-->>R: Ride summary + receipt
+    RE-->>Dr: Earnings updated
+```
 
 ### Architectural Principles
 
