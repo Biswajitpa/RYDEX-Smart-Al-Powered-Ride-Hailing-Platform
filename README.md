@@ -317,6 +317,18 @@ RYDEX is built on the belief that a portfolio project should be held to **produc
   <img src="https://img.shields.io/badge/Engineered%20by-Biswajit%20Pattanaik-0055FF?style=for-the-badge" />
 </p>
 
+
+
+<a href="https://github.com/Biswajitpa"><img src="https://img.shields.io/badge/GitHub-Biswajitpa-181717?logo=github&style=for-the-badge" /></a>
+
+<br/><br/>
+
+⭐ If this project helped or inspired you, consider giving it a star! ⭐
+
+Show Image
+
+</div>
+
 ### **Biswajit Pattanaik**
 **Full-Stack Developer • System Design Engineer • AI Integration • Backend Engineering • UI/UX Designer • DevOps & Deployment Engineer**
 
