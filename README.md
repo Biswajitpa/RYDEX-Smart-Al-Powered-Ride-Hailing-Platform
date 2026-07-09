@@ -273,7 +273,9 @@ Future:    Microservices  →  Container orchestration (Kubernetes)  →  Auto-s
 
 ## ⚙️ Tech Stack
 
-
+<p align="center">
+  <img width="600" alt="Tech Stack" src="https://github.com/user-attachments/assets/5e7b3aec-fd62-4284-b4ac-d92fb306119f" />
+</p>
 
 | Domain | Technologies |
 |---|---|
@@ -312,28 +314,22 @@ RYDEX is built on the belief that a portfolio project should be held to **produc
 
 ## 👨‍💻 Author
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Made%20with-%E2%9D%A4-red?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Engineered%20by-Biswajit%20Pattanaik-0055FF?style=for-the-badge" />
-</p>
+<div align="center">
 
-
-
-<a href="https://github.com/Biswajitpa"><img src="https://img.shields.io/badge/GitHub-Biswajitpa-181717?logo=github&style=for-the-badge" /></a>
-
-<br/><br/>
-
-⭐ If this project helped or inspired you, consider giving it a star! ⭐
-
-Show Image
-
-</div>
+<img src="https://github.com/Biswajitpa.png" width="100" style="border-radius:50%" />
 
 ### **Biswajit Pattanaik**
 **Full-Stack Developer • System Design Engineer • AI Integration • Backend Engineering • UI/UX Designer • DevOps & Deployment Engineer**
 
 Designed, engineered, and deployed the **entire RYDEX platform** end-to-end — system architecture, backend services, frontend experience, security model, and production infrastructure — as a single-owner, production-grade build.
 
-<p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:0055FF,100:00F7FF&height=100&section=footer" width="100%"/>
-</p>
+<a href="https://github.com/Biswajitpa"><img src="https://img.shields.io/badge/GitHub-Biswajitpa-181717?logo=github&style=for-the-badge" /></a>
+<img src="https://img.shields.io/badge/Made%20with-%E2%9D%A4-red?style=for-the-badge" />
+
+<br/><br/>
+
+⭐ **If this project helped or inspired you, consider giving it a star!** ⭐
+
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:0055FF,100:00F7FF&height=100&section=footer" width="100%"/>
+
+</div>
