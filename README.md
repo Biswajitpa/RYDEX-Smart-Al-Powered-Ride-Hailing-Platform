@@ -273,9 +273,7 @@ Future:    Microservices  →  Container orchestration (Kubernetes)  →  Auto-s
 
 ## ⚙️ Tech Stack
 
-<p align="center">
-  <img width="600" alt="Tech Stack" src="https://github.com/user-attachments/assets/5e7b3aec-fd62-4284-b4ac-d92fb306119f" />
-</p>
+
 
 | Domain | Technologies |
 |---|---|
